@@ -1,0 +1,523 @@
+﻿unit ORM.browserBase;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
+  WLick.ConstrutorSQL, Vcl.ImgList, cxGraphics, cxClasses, dxBar, System.Actions,
+  Vcl.ActnList, Vcl.PlatformDefaultStyleActnCtrls, Vcl.ActnMan, cxControls,
+  cxLookAndFeels, cxLookAndFeelPainters, cxStyles, cxCustomData, cxFilter,
+  cxData, cxDataStorage, cxEdit, cxNavigator, Data.DB, cxDBData, cxGridLevel,
+  cxGridCustomView, cxGridCustomTableView, cxGridTableView, cxGridDBTableView,
+  cxGrid, ORM.Images, ORM.DTOBase, generics.collections, cxEditRepositoryItems,
+  cxCheckBox, cxBarEditItem, MemDS, DBAccess, Uni, WLick.ClassHelper,
+  ORM.FichaBase, ORM.daoBase, dxCore, cxCalendar;
+
+type
+
+  TFieldDataType = (dtString, dtInteger, dtDate, dtTime, dtCurreny, dtBoolean);
+
+  TColumnOrder = (coNone, coAsc, coDesc);
+  TBrowserColumn = class
+  private
+    FIsPK: Boolean;
+    FField: String;
+    FCaption: String;
+    FDataType: TFieldDataType;
+    FOrder: TColumnOrder;
+    FVisible: Boolean;
+
+  public
+
+    { ReadOnly - Set apenas com Builder }
+    property IsPK: Boolean read FIsPK;
+    property Field: String read FField;
+    property Caption: String read FCaption;
+    property DataType: TFieldDataType read FDataType;
+    property Order: TColumnOrder read FOrder;
+    property Visible: Boolean read FVisible;
+
+    function SetPK(const aIsPK: Boolean = True): TBrowserColumn;
+    function SetField(const aField: String): TBrowserColumn;
+    function SetCaption(const aCapton: String): TBrowserColumn;
+    function SetDataType(const aDataType: TFieldDataType): TBrowserColumn;
+    function SetOrder(const aOrder: TColumnOrder): TBrowserColumn;
+    function SetVisible(const aVisible: Boolean): TBrowserColumn;
+
+    constructor Create();
+
+  end;
+
+  TORMBrowserBaseClass = class of TORMBrowserBase;
+
+  TORMBrowserBase = class(TForm)
+    menuBrowser: TdxBarManager;
+    managerBrowserBar: TdxBar;
+    actBrowser: TActionManager;
+    actNovo: TAction;
+    actEditar: TAction;
+    actExcluir: TAction;
+    dxBarSubItem1: TdxBarSubItem;
+    BrowserGridDBTableView: TcxGridDBTableView;
+    BrowserGridLevel: TcxGridLevel;
+    BrowserGrid: TcxGrid;
+    btnAdd: TdxBarButton;
+    btnEdit: TdxBarButton;
+    btnDelete: TdxBarButton;
+    BrowserGridDBTableViewColumn1: TcxGridDBColumn;
+    BrowserGridDBTableViewColumn2: TcxGridDBColumn;
+    BrowserGridDBTableViewColumn3: TcxGridDBColumn;
+    editRepository: TcxEditRepository;
+    RepositoryCurrency: TcxEditRepositoryCurrencyItem;
+    RepositoryDate: TcxEditRepositoryDateItem;
+    RepositoryTime: TcxEditRepositoryTimeItem;
+    RepositorySpin: TcxEditRepositorySpinItem;
+    RepositoryText: TcxEditRepositoryTextItem;
+    btnSubOpcoes: TdxBarSubItem;
+    btnAgrupar: TcxBarEditItem;
+    RepositoryCheckBox: TcxEditRepositoryCheckBoxItem;
+    dsBrowser: TDataSource;
+    uniBrowser: TUniQuery;
+    cxBarEditItem1: TcxBarEditItem;
+    cxBarEditItem2: TcxBarEditItem;
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure btnAgruparChange(Sender: TObject);
+    procedure actNovoExecute(Sender: TObject);
+    procedure actEditarExecute(Sender: TObject);
+    procedure actExcluirExecute(Sender: TObject);
+    procedure BrowserGridDBTableViewCellDblClick(Sender: TcxCustomGridTableView;
+      ACellViewInfo: TcxGridTableDataCellViewInfo; AButton: TMouseButton;
+      AShift: TShiftState; var AHandled: Boolean);
+    procedure NenhumEvento(a_Sender: TObject);
+
+  private
+    FColumns: TStringList;
+
+    procedure DrawBrowser();
+    procedure DrawColumnsGrid();
+    procedure LoadBrowser();
+  protected
+    FDAO: TORMDAOBase;
+
+    function AddColumnBrowser(const aField, aCaption: String): TBrowserColumn;
+    function AddButton( const aName: String; const aCaption: String; const aIndexImage: Smallint; const aEvent: TNotifyEvent): TORMBrowserBase;
+    function GetButton(const a_Caption: String): TdxBarButton;
+    function AddEdit( const aName: String; const aCaption: String; const aPropertiesClassName: String; const aEvent: TNotifyEvent): TORMBrowserBase;
+    function GetEdit(const a_Caption: String): TcxBarEditItem;
+    procedure RemoveColumnBrowser(const aField: String);
+    procedure ClearColumnsBrowser();
+
+
+    function GetSQLBrowser(): ISQLConstructor; virtual; abstract;
+    procedure SetColumnsBrowser(); virtual; abstract;
+
+    function GetCaption: String; virtual; abstract;
+    function ClassFicha(): TORMFichaBaseClass; virtual; abstract;
+    function ClassDTO(): TORMDTOBaseClass; virtual; abstract;
+    function GetIDSelecionado(): TGuid; virtual; abstract;
+
+    function CanDelete(): Boolean; virtual;
+
+    procedure BeforeLoadBrowser(); virtual;
+    procedure AfterLoadBrowser(); virtual;
+
+    procedure CreateAllObjects(); virtual;
+    procedure DestroyAllObjects(); virtual;
+
+    //procedure Update(const aSender: TORMBrowserObserver); virtual; abstract;
+
+  public
+    procedure Init();
+  end;
+
+implementation
+
+{$R *.dfm}
+{ TORMBrowserBase }
+
+procedure TORMBrowserBase.actEditarExecute(Sender: TObject);
+var
+  vSelecionado: TGuid;
+begin
+  vSelecionado := GetIDSelecionado();
+  if vSelecionado.IsNull then
+    ShowMessage('Nenhum registro foi selecionado.')
+  else
+  begin
+    with ClassFicha.Create(nil) do
+    begin
+      Init(vSelecionado, False);
+      Self.LoadBrowser();
+      Free;
+    end;
+  end;
+end;
+
+procedure TORMBrowserBase.actExcluirExecute(Sender: TObject);
+var
+  vDTO: TORMDTOBase;
+  vSelecionado: TGuid;
+begin
+  vSelecionado := GetIDSelecionado();
+  if vSelecionado.IsNull then
+    ShowMessage('Nenhum registro foi selecionado.')
+  else
+  begin
+    if MessageDlg('Confirma a exclusão desse registro?',mtConfirmation,[mbYes, mbNo], 0) = mrYes then
+    begin
+      vDTO := ClassDTO.Create;
+      try
+        if CanDelete then
+        begin
+          vDTO.ID := GetIDSelecionado();
+          FDAO.DoDelete(vDTO);
+          Self.LoadBrowser();
+        end;
+      finally
+        vDTO.Free;
+      end;
+    end;
+  end;
+end;
+
+procedure TORMBrowserBase.actNovoExecute(Sender: TObject);
+begin
+  with ClassFicha.Create(nil) do
+  begin
+    Init(TFuncoesGUID.NullGUID, True);
+    Self.LoadBrowser();
+    Free;
+  end;
+end;
+
+function TORMBrowserBase.AddButton(const aName, aCaption: String;
+  const aIndexImage: Smallint; const aEvent: TNotifyEvent): TORMBrowserBase;
+var
+  t_Button: TdxBarButton;
+  t_Action: TAction;
+begin
+  Result := Self;
+
+  // Cria o Action do novo botão.
+  t_Action := TAction.Create(Result.actBrowser);
+  with t_Action do
+  begin
+    Name := 'act_' + aName;
+    Caption := aCaption;
+
+    if Assigned(aEvent)
+      then OnExecute := aEvent
+      else OnExecute := NenhumEvento;
+
+    if aIndexImage > - 1
+      then ImageIndex := aIndexImage;
+  end;
+
+  // Cria o botão
+  t_Button := TdxBarButton.Create(Result);
+  with t_Button do
+  begin
+    Action := t_Action;
+    PaintStyle := psCaptionGlyph;
+    Name := 'bt_' + aName
+  end;
+
+  // Associa o botão ao menuBar
+  Result.managerBrowserBar.LockUpdate := True;
+  try
+    with Result.managerBrowserBar.ItemLinks.Add do
+    begin
+      Item := t_Button;
+      //BeginGroup := a_Separator;
+      UserPaintStyle := psCaptionGlyph;
+    end;
+  finally
+    Result.managerBrowserBar.LockUpdate := False;
+  end;
+
+end;
+
+function TORMBrowserBase.GetButton(const a_Caption: String): TdxBarButton;
+var
+  t_Indice: Integer;
+begin
+  Result := nil;
+  for t_indice := 0 to ComponentCount - 1 do
+  begin
+    if (Components[t_Indice] is TdxBarButton) and (TdxBarButton(Components[t_Indice]).Caption = a_Caption) then
+    begin
+      Result := TdxBarButton(Components[t_Indice]);
+      Break;
+    end;
+  end;
+end;
+
+function TORMBrowserBase.GetEdit(const a_Caption: String): TcxBarEditItem;
+var
+  t_Indice: Integer;
+begin
+  Result := nil;
+  for t_indice := 0 to ComponentCount - 1 do
+  begin
+    if (Components[t_Indice] is TcxBarEditItem) and (TcxBarEditItem(Components[t_Indice]).Caption = a_Caption) then
+    begin
+      Result := TcxBarEditItem(Components[t_Indice]);
+      Break;
+    end;
+  end;
+end;
+
+function TORMBrowserBase.AddColumnBrowser(const aField, aCaption: String): TBrowserColumn;
+begin
+  Result := TBrowserColumn.Create();
+
+  Result
+    .SetCaption(aCaption)
+    .SetField(aField);
+
+  { Add na lista }
+  FColumns.AddObject(aField, Result);
+
+end;
+
+function TORMBrowserBase.AddEdit(const aName, aCaption: String; const aPropertiesClassName: String; const aEvent: TNotifyEvent): TORMBrowserBase;
+var
+  t_Edit: TcxBarEditItem;
+  t_Action: TAction;
+begin
+  Result := Self;
+
+//  // Cria o Action do novo botão.
+//  t_Action := TAction.Create(Result.actBrowser);
+//  with t_Action do
+//  begin
+//    Name := 'act_' + aName;
+//    Caption := aCaption;
+//
+//    if Assigned(aEvent)
+//      then OnExecute := aEvent
+//      else OnExecute := NenhumEvento;
+//
+//  end;
+
+  // Cria o botão
+  t_Edit := TcxBarEditItem.Create(Result);
+  with t_Edit do
+  begin
+    PropertiesClassName := aPropertiesClassName;
+    Caption := aCaption;
+    ShowCaption := (aCaption <> EmptyStr);
+    Properties.OnChange := aEvent;
+    Name := 'edt_' + aName
+  end;
+
+  // Associa o botão ao menuBar
+  Result.managerBrowserBar.LockUpdate := True;
+  try
+    with Result.managerBrowserBar.ItemLinks.Add do
+    begin
+      Item := t_Edit;
+      UserPaintStyle := psCaptionGlyph;
+    end;
+  finally
+    Result.managerBrowserBar.LockUpdate := False;
+  end;
+
+end;
+
+procedure TORMBrowserBase.AfterLoadBrowser;
+begin
+
+end;
+
+procedure TORMBrowserBase.BeforeLoadBrowser;
+begin
+
+end;
+
+procedure TORMBrowserBase.BrowserGridDBTableViewCellDblClick(
+  Sender: TcxCustomGridTableView; ACellViewInfo: TcxGridTableDataCellViewInfo;
+  AButton: TMouseButton; AShift: TShiftState; var AHandled: Boolean);
+begin
+  actEditar.Execute;
+end;
+
+procedure TORMBrowserBase.btnAgruparChange(Sender: TObject);
+begin
+  //Self.BrowserGridDBTableView.OptionsView.GroupByBox := (Sender as TcxBarEditItem).EditValue.ToBoolean();
+end;
+
+function TORMBrowserBase.CanDelete: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TORMBrowserBase.ClearColumnsBrowser;
+begin
+  FColumns.Clear;
+end;
+
+procedure TORMBrowserBase.CreateAllObjects;
+begin
+  Self.FColumns := TStringList.Create();
+  Self.FDAO := TORMDAOBase.Create();
+end;
+
+procedure TORMBrowserBase.DestroyAllObjects;
+begin
+  Self.FColumns.Free;
+  Self.FDAO.Free;
+end;
+
+procedure TORMBrowserBase.DrawBrowser;
+begin
+  Self.Caption := Self.GetCaption();
+  Self.DrawColumnsGrid();
+  Self.LoadBrowser();
+end;
+
+procedure TORMBrowserBase.DrawColumnsGrid;
+var
+  vColumn: TBrowserColumn;
+  vColumnGrid: TcxGridDBColumn;
+  I: Integer;
+
+begin
+  { Recupera as colunas com m鴯do virtual }
+  Self.SetColumnsBrowser();
+
+  Self.BrowserGridDBTableView.ClearItems;
+  for I := 0 to Pred(FColumns.Count) do
+  begin
+    vColumn := TBrowserColumn(FColumns.Objects[I]);
+    vColumnGrid := Self.BrowserGridDBTableView.CreateColumn;
+    with vColumnGrid do
+    begin
+      DataBinding.FieldName := vColumn.Field;
+      Caption := vColumn.Caption;
+      Visible := vColumn.Visible and (not vColumn.IsPK);
+
+      case vColumn.FOrder of
+        coNone: SortOrder := TdxSortOrder.soNone;
+        coAsc: SortOrder := TdxSortOrder.soAscending;
+        coDesc: SortOrder := TdxSortOrder.soDescending;
+      end;
+
+      case vColumn.DataType of
+        dtString:
+          RepositoryItem := RepositoryText;
+        dtInteger:
+          RepositoryItem := RepositorySpin;
+        dtDate:
+          RepositoryItem := RepositoryDate;
+        dtTime:
+          RepositoryItem := RepositoryTime;
+        dtCurreny:
+          RepositoryItem := RepositoryCurrency;
+        dtBoolean:
+          RepositoryItem := RepositoryCheckBox;
+      end;
+
+    end;
+  end;
+end;
+
+procedure TORMBrowserBase.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := caFree;
+end;
+
+procedure TORMBrowserBase.FormCreate(Sender: TObject);
+begin
+  CreateAllObjects();
+end;
+
+procedure TORMBrowserBase.FormDestroy(Sender: TObject);
+begin
+  DestroyAllObjects();
+end;
+
+procedure TORMBrowserBase.Init();
+begin
+  Self.DrawBrowser;
+end;
+
+procedure TORMBrowserBase.LoadBrowser;
+var
+  vSQL: ISQLConstructor;
+begin
+  BeforeLoadBrowser();
+  vSQL := GetSQLBrowser();
+
+  FDAO.OpenSQL(vSQL, uniBrowser);
+  AfterLoadBrowser();
+end;
+
+procedure TORMBrowserBase.NenhumEvento(a_Sender: TObject);
+begin
+//
+end;
+
+procedure TORMBrowserBase.RemoveColumnBrowser(const aField: String);
+var
+  vIndex: Integer;
+begin
+  vIndex := FColumns.IndexOf(aField);
+  if vIndex > -1 then
+    FColumns.Delete(vIndex);
+
+end;
+
+{ TBrowserColumn }
+
+constructor TBrowserColumn.Create;
+begin
+  inherited Create();
+
+  { Create with defaults }
+  Self.FIsPK := False;
+  Self.FVisible := True;
+  Self.FDataType := dtString;
+  Self.FOrder := coNone;
+end;
+
+function TBrowserColumn.SetCaption(const aCapton: String): TBrowserColumn;
+begin
+  Result := Self;
+  Self.FCaption := aCapton;
+end;
+
+function TBrowserColumn.SetDataType(const aDataType: TFieldDataType): TBrowserColumn;
+begin
+  Result := Self;
+  Self.FDataType := aDataType;
+end;
+
+function TBrowserColumn.SetField(const aField: String): TBrowserColumn;
+begin
+  Result := Self;
+  Self.FField := aField;
+end;
+
+function TBrowserColumn.SetOrder(const aOrder: TColumnOrder): TBrowserColumn;
+begin
+  Result := Self;
+  Self.FOrder := aOrder;
+end;
+
+function TBrowserColumn.SetPK(const aIsPK: Boolean = True): TBrowserColumn;
+begin
+  Result := Self;
+  Self.FIsPK := aIsPK;
+end;
+
+function TBrowserColumn.SetVisible(const aVisible: Boolean): TBrowserColumn;
+begin
+  Result := Self;
+  Self.FVisible := aVisible;
+end;
+
+end.

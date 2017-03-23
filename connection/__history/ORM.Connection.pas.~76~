@@ -1,0 +1,147 @@
+unit ORM.Connection;
+
+interface
+
+uses Uni, SysUtils;
+
+type
+  TpDataBaseType = (dbNaoDefinido, dbPostgres, dbMySQL, dbSQLServer, dbODBC);
+
+  TConexao = class
+    private
+      FHost        : String;
+      FPort        : Integer;
+      FUser        : String;
+      FPassword    : String;
+      FDataBaseName: String;
+      FDataBaseType: TpDataBaseType;
+
+      FConnection: TUniConnection;
+
+      function GetProviderName(): String;
+
+      function IsValid(): Boolean;
+      procedure Connect();
+    public
+      property Host        : String write FHost;
+      property Port        : Integer write FPort;
+      property User        : String write FUser;
+      property Password    : String write FPassword;
+      property DataBaseName: String write FDataBaseName;
+      property DataBaseType: TpDataBaseType write FDataBaseType;
+
+      constructor Create();
+
+      function Conectado(): Boolean;
+
+    published
+      function DataBase(): TUniConnection;
+  end;
+
+function GetInstance(): TConexao;
+
+var
+  FSingletonBaseConexao: TConexao = nil;
+
+implementation
+
+{ TConexao }
+
+uses DMConnection;
+
+function GetInstance: TConexao;
+begin
+  if not Assigned(FSingletonBaseConexao)
+  then
+    FSingletonBaseConexao := TConexao.Create();
+  Result := FSingletonBaseConexao;
+end;
+
+{ TConexao }
+
+function TConexao.Conectado: Boolean;
+begin
+  Result := False;
+  if Assigned(FConnection) then
+  begin
+    Result := FConnection.Connected;
+  end;
+
+end;
+
+procedure TConexao.Connect;
+begin
+  if IsValid() then
+  begin
+    with (DMConnection.DModule.Conexao) do
+    begin
+      DataBaseName := FDataBaseName;
+      Host := FHost;
+      Port := FPort;
+      Username := FUser;
+      Password := FPassword;
+      ProviderName := GetProviderName();
+
+      Connect;
+      FConnection := DMConnection.DModule.Conexao;
+    end;
+  end
+  else
+  begin
+    raise Exception.Create('Foi feito uma tentativa de conexão com banco de dados, porém as ');
+  end;
+end;
+
+constructor TConexao.Create;
+begin
+  Self.FHost := EmptyStr;
+  Self.FPort := 0;
+  Self.FUser := EmptyStr;
+  Self.FPassword := EmptyStr;
+  Self.FDataBaseName := EmptyStr;
+  Self.FDataBaseType := dbNaoDefinido
+end;
+
+function TConexao.DataBase: TUniConnection;
+begin
+  if not Assigned(FConnection) then
+  begin
+    Self.Connect();
+  end;
+  Result := FConnection;
+end;
+
+function TConexao.GetProviderName: String;
+begin
+  case FDataBaseType of
+    dbNaoDefinido:
+      Result := '';
+    dbPostgres:
+      Result := 'PostgreSQL';
+    dbMySQL:
+      Result := 'MySQL';
+    dbSQLServer:
+      Result := 'SQL Server';
+    dbODBC:
+      Result := 'ODBC';
+  end;
+end;
+
+function TConexao.IsValid: Boolean;
+begin
+  Result :=
+    (FHost <> EmptyStr) and
+    (FPort <> 0) and
+    (FUser <> EmptyStr) and
+    (FPassword <> EmptyStr) and
+    (FDataBaseName <> EmptyStr) and
+    (FDataBaseType <> dbNaoDefinido);
+end;
+
+initialization
+
+finalization
+
+FreeAndNil(FSingletonBaseConexao);
+
+end.

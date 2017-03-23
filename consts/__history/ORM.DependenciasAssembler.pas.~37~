@@ -1,0 +1,105 @@
+unit ORM.DependenciasAssembler;
+
+interface
+
+uses Uni, SysUtils, Generics.Collections, ORM.assemblerBase, ORM.dtoBase,
+  ORM.modelBase;
+
+type
+  TORMDependenciasAssembler = class
+    private
+//      FListAssemblerDTO   : TObjectDictionary<TORMDTOBaseClass,TORMAssemblerBaseClass>;
+//      FListAssemblerModel : TObjectDictionary<TORMModelBaseClass,TORMAssemblerBaseClass>;
+    public
+
+//      procedure AddDependencia(const aDTO: TORMDTOBaseClass; const aAssembler: TORMAssemblerBaseClass); overload;
+//      procedure AddDependencia(const aModel: TORMModelBaseClass; const aAssembler: TORMAssemblerBaseClass); overload;
+
+//      function GetDependencia(const aDTO: TORMDTOBase) : TORMAssemblerBaseClass; overload;
+//      function GetDependencia(const aModel: TORMModelBase) : TORMAssemblerBaseClass; overload;
+
+//      constructor Create();
+//      destructor Destroy(); override;
+
+    public
+//      function DataBase(): TUniConnection;
+  end;
+
+function GetInstance(): TORMDependenciasAssembler;
+
+var
+  FSingletonDependenciasAssembler: TORMDependenciasAssembler = nil;
+
+implementation
+
+{ TConexao }
+
+uses DMConnection;
+
+function GetInstance: TORMDependenciasAssembler;
+begin
+//  if not Assigned(FSingletonDependenciasAssembler)
+//  then
+//    FSingletonDependenciasAssembler := TORMDependenciasAssembler.Create();
+//  Result := FSingletonDependenciasAssembler;
+end;
+
+{ TConexao }
+
+{ TORMDependenciasAssembler }
+
+//procedure TORMDependenciasAssembler.AddDependencia(
+//  const aModel: TORMModelBaseClass; const aAssembler: TORMAssemblerBaseClass);
+//begin
+//  Self.FListAssemblerModel.Add(aModel, aAssembler);
+//end;
+
+//procedure TORMDependenciasAssembler.AddDependencia(const aDTO: TORMDTOBaseClass;
+//  const aAssembler: TORMAssemblerBaseClass);
+//begin
+//  Self.FListAssemblerDTO.Add(aDTO, aAssembler);
+//end;
+
+//constructor TORMDependenciasAssembler.Create;
+//begin
+//  inherited;
+//  FListAssemblerDTO   := TObjectDictionary<TORMDTOBaseClass,TORMAssemblerBaseClass>.Create;
+//  FListAssemblerModel := TObjectDictionary<TORMModelBaseClass,TORMAssemblerBaseClass>.Create;
+//end;
+
+//function TORMDependenciasAssembler.DataBase: TUniConnection;
+//begin
+//
+//end;
+
+//destructor TORMDependenciasAssembler.Destroy;
+//begin
+//  FListAssemblerDTO.Free;
+//  FListAssemblerModel.Free;
+//
+//  inherited;
+//end;
+
+//function TORMDependenciasAssembler.GetDependencia(
+//  const aModel: TORMModelBase): TORMAssemblerBaseClass;
+//begin
+//  Result := nil;
+//  if (Self.FListAssemblerModel.ContainsKey(TORMModelBaseClass(aModel.ClassType))) then
+//    Result := Self.FListAssemblerModel[TORMModelBaseClass(aModel.ClassType)];
+//end;
+
+//function TORMDependenciasAssembler.GetDependencia(
+//  const aDTO: TORMDTOBase): TORMAssemblerBaseClass;
+//begin
+//  Result := nil;
+//  if (Self.FListAssemblerDTO.ContainsKey(TORMDTOBaseClass(aDTO.ClassType))) then
+//    Result := Self.FListAssemblerDTO[TORMDTOBaseClass(aDTO.ClassType)];
+//end;
+
+initialization
+
+finalization
+
+//FreeAndNil(FSingletonDependenciasAssembler);
+
+end.

@@ -1,0 +1,714 @@
+﻿unit ORM.daoBase;
+
+interface
+
+uses ORM.modelBase, Rtti, ORM.attributes, system.SysUtils, Uni, TypInfo,
+  WLick.ClassHelper, Generics.Collections, WLick.ConstrutorSQL, ORM.Connection,
+  ORM.dtoBase, ORM.assemblerBase, WLick.Constantes, Classes, WLick.Types;
+
+type
+  TMyFieldValor = record
+    Field: String;
+    Valor: Variant;
+  end;
+  TArrayMyFieldValor = array of TMyFieldValor;
+
+  TORMDAOBaseClass = class of TORMDAOBase;
+  TORMDAOBase = class
+  protected
+    procedure PrepareParametersByModel(const aQuery: TUniQuery; aProp: TRttiProperty; aField: string; aModel: TORMModelBase);
+
+    function ObterSQLInsert(aModel: TORMModelBase): WideString;
+    function ObterSQLUpdate(aModel: TORMModelBase): WideString;
+    function ObterSQLDelete(aModel: TORMModelBase): WideString;
+    function ObterSQLSelect(aModel: TORMModelBase): WideString;
+
+//    function GetAssembler(const AAssemblerClass: String): TORMAssemblerBase;
+
+  public
+
+    procedure DoInsert(aDTO: TORMDTOBase);
+    procedure DoUpdate(aDTO: TORMDTOBase);
+    procedure DoDelete(aDTO: TORMDTOBase);
+    procedure DoSelect(aDTO: TORMDTOBase);
+
+    function InTransaction: Boolean;
+    procedure StartTransaction;
+    procedure Commit;
+    procedure RollBack;
+
+    procedure ExecutaSQL(const a_SQL: string; const Parametros: array of Variant); overload;
+    procedure ExecutaSQL(const a_SQL: WideString); overload;
+    procedure ExecutaSQL(const a_Query: TUniQuery); overload;
+    procedure OpenSQL(const a_SQL: WideString; const a_Parameters: array of Variant; const a_Query: TUniQuery); overload;
+    procedure OpenSQL(const a_SQL: WideString; const a_Query: TUniQuery); overload;
+    procedure OpenSQL(const a_SQL: ISQLConstructor; const a_Query: TUniQuery); overload;
+
+    constructor Create();
+
+  end;
+
+implementation
+
+constructor TORMDAOBase.Create();
+begin
+  inherited Create;
+end;
+
+function TORMDAOBase.InTransaction: Boolean;
+begin
+  Result := ORM.Connection.GetInstance().DataBase.InTransaction;
+end;
+
+function TORMDAOBase.ObterSQLDelete(aModel: TORMModelBase): WideString;
+begin
+
+end;
+
+
+function TORMDAOBase.ObterSQLInsert(aModel: TORMModelBase): WideString;
+begin
+
+end;
+
+function TORMDAOBase.ObterSQLSelect(aModel: TORMModelBase): WideString;
+begin
+
+end;
+
+function TORMDAOBase.ObterSQLUpdate(aModel: TORMModelBase): WideString;
+begin
+
+end;
+
+procedure TORMDAOBase.OpenSQL(const a_SQL: ISQLConstructor; const a_Query: TUniQuery);
+begin
+  OpenSQL(a_SQL.AsString, [], a_Query);
+end;
+
+procedure TORMDAOBase.OpenSQL(const a_SQL: WideString; const a_Query: TUniQuery);
+begin
+  OpenSQL(a_SQL, [], a_Query);
+end;
+
+procedure TORMDAOBase.OpenSQL(const a_SQL: WideString; const a_Parameters: array of Variant; const a_Query: TUniQuery);
+var
+  i: Integer;
+begin
+  a_Query.Connection := ORM.Connection.GetInstance().DataBase;
+
+  a_Query.SQL.BeginUpdate;
+  a_Query.SQL.Clear;
+  a_Query.SQL.Add(a_SQL);
+
+  a_Query.SQL.EndUpdate;
+
+  for i := 0 to Pred(a_Query.ParamCount) do
+  begin
+    a_Query.Params[i].Value := a_Parameters[i];
+  end;
+
+  try
+    a_Query.Open();
+  except
+    on e: Exception do
+    begin
+      raise Exception.Create('TORMDAOBase.ExecutaSQL: ' + e.Message);
+    end;
+  end;
+
+end;
+
+procedure TORMDAOBase.StartTransaction;
+begin
+  ORM.Connection.GetInstance().DataBase.StartTransaction;
+end;
+
+procedure TORMDAOBase.ExecutaSQL(const a_SQL: WideString);
+begin
+
+  with TUniQuery.Create(nil) do
+  try
+    Connection := ORM.Connection.GetInstance().DataBase;
+    SQL.BeginUpdate;
+    SQL.Clear;
+    SQL.Add(a_SQL);
+    SQL.EndUpdate;
+    try
+      ExecSQL();
+    except
+      on e: Exception do
+      begin
+        raise Exception.Create('TORMDAOBase.ExecutaSQL: ' + e.Message);
+      end;
+    end;
+  finally
+    Free;
+  end;
+end;
+
+procedure TORMDAOBase.ExecutaSQL(const a_SQL: string; const Parametros: array of Variant);
+var
+  i: Integer;
+begin
+
+  with TUniQuery.Create(nil) do
+  try
+    Connection := ORM.Connection.GetInstance().DataBase;
+    SQL.BeginUpdate;
+    SQL.Clear;
+    SQL.Add(a_SQL);
+    SQL.EndUpdate;
+
+    for i := 0 to Pred(ParamCount) do
+    begin
+      Params[i].Value := Parametros[i];
+    end;
+
+    try
+      ExecSQL();
+    except
+      on e: Exception do
+      begin
+        raise Exception.Create('TORMDAOBase.ExecutaSQL: ' + e.Message);
+      end;
+    end;
+  finally
+    Free;
+  end;
+end;
+
+procedure TORMDAOBase.ExecutaSQL(const a_Query: TUniQuery);
+begin
+  try
+    a_Query.ExecSQL;
+  except
+    on e: Exception do
+    begin
+      raise Exception.Create('TORMDAOBase.ExecutaSQL: ' + e.Message);
+    end;
+  end;
+end;
+
+//function TORMDAOBase.GetAssembler(
+//  const AAssemblerClass: String): TORMAssemblerBase;
+//var
+//  AssemblerClass: TORMAssemblerBaseClass;
+//begin
+//  try
+//    AssemblerClass := TORMAssemblerBaseClass(FindClass(AAssemblerClass));
+//    if Assigned(AssemblerClass) then
+//    begin
+//      Result := AssemblerClass;
+//    end;
+//  except
+//    on e: exception do
+//    begin
+//      raise Exception.Create('Método AssemblerClass não retornou um classe de Assembler existente!'+ E.Message);
+//    end;
+//  end;
+//end;
+
+procedure TORMDAOBase.RollBack;
+begin
+  ORM.Connection.GetInstance().DataBase.RollBack;
+end;
+
+procedure TORMDAOBase.Commit;
+begin
+  ORM.Connection.GetInstance().DataBase.Commit;
+end;
+
+procedure TORMDAOBase.PrepareParametersByModel(const aQuery: TUniQuery; aProp: TRttiProperty; aField: string; aModel: TORMModelBase);
+var
+  vValue: TValue;
+begin
+
+  with aQuery do
+  begin
+    vValue := aProp.GetValue(aModel as TORMModelBase);
+    case aProp.PropertyType.TypeKind of
+
+      tkRecord:
+        begin
+          if aProp.GetValue(aModel as TORMModelBase).TypeInfo.Name = 'TGUID' then
+          begin
+            Params.ParamByName(aField).AsGuid := vValue.AsType<TGUID>
+          end;
+        end;
+
+      tkString, tkUString, tkWString:
+        begin
+          Params.ParamByName(aField).AsString := vValue.AsString;
+        end;
+
+      tkInteger, tkInt64:
+        begin
+          Params.ParamByName(aField).AsInteger := vValue.AsInteger;
+        end;
+
+      tkFloat:
+        begin
+          if (vValue.TypeInfo = system.TypeInfo(TDate)) then
+          begin
+            if not(vValue.AsType<TDate>.IsNull) then
+            begin
+              Params.ParamByName(aField).AsDate := vValue.AsType<TDate>;
+            end;
+          end
+          else if (vValue.TypeInfo = system.TypeInfo(TDateTime)) then
+          begin
+            if not(vValue.AsType<TDateTime>.IsNull) then
+            begin
+              Params.ParamByName(aField).AsDateTime := vValue.AsType<TDateTime>;
+            end;
+          end
+          else if (vValue.TypeInfo = system.TypeInfo(TTime)) then
+          begin
+            if not(vValue.AsType<TTime>.IsNull) then
+            begin
+              Params.ParamByName(aField).AsTime := vValue.AsType<TTime>;
+            end;
+          end
+          else
+          begin
+            Params.ParamByName(aField).AsCurrency := vValue.AsCurrency;
+          end;
+        end;
+
+      tkEnumeration:
+        begin
+          if AnsiSameText(aProp.PropertyType.Name, 'Boolean') then
+            Params.ParamByName(aField).AsBoolean := vValue.AsBoolean
+          else
+            Params.ParamByName(aField).AsInteger := vValue.AsOrdinal;
+        end;
+
+      tkVariant:
+        begin
+          Params.ParamByName(aField).Value := vValue.AsVariant;
+        end;
+
+    else
+      raise Exception.Create('Tipo de campo não conhecido: ' + aProp.PropertyType.ToString);
+    end;
+  end;
+end;
+
+procedure TORMDAOBase.DoDelete(aDTO: TORMDTOBase);
+var
+  NomeTab: String;
+  CamposPK: TArrayString;
+  Sep: String;
+  Campo: String;
+
+  Contexto: TRttiContext;
+  TipoRTTI: TRttiType;
+  PropRTTI: TRttiProperty;
+  t_UniQuery: TUniQuery;
+
+  vModel : TORMModelBase;
+  vAssemblerObject : TORMAssemblerBase;
+
+begin
+
+  vAssemblerObject := ORM.assemblerBase.TORMAssemblerBase.GetAssembler(aDTO.AssemblerClass);
+  try
+    vModel := vAssemblerObject.DTOToModel(aDTO);
+    try
+
+      NomeTab := vModel.GetTableName();
+      CamposPK := vModel.GetPrimaryKeys;
+
+      Contexto := TRttiContext.Create;
+      try
+        TipoRTTI := Contexto.GetType(vModel.ClassType);
+
+        t_UniQuery := TUniQuery.Create(nil);
+        try
+          with t_UniQuery do
+          begin
+            Connection := ORM.Connection.GetInstance().DataBase;
+            Close;
+            SQL.Clear;
+            SQL.Add('delete from ' + NomeTab);
+            SQL.Add(' where ');
+
+            { Percorre todos os IDs }
+            Sep := '';
+            for Campo in CamposPK do
+            begin
+              SQL.Add(Sep + Campo + '= :' + Campo);
+              Sep := ' and ';
+
+              { Setando parâmetros }
+              for PropRTTI in TipoRTTI.GetProperties do
+              begin
+                if CompareText(PropRTTI.Name, Campo) = 0 then
+                begin
+                  PrepareParametersByModel(t_UniQuery, PropRTTI, Campo, vModel);
+                end;
+              end;
+            end;
+
+            { Execute }
+            try
+              Prepare();
+              ExecSQL;
+            except
+              on e: Exception do
+              begin
+                raise Exception.Create('Ocorreu um erro no método TORMDAOBase.DoDelete: ' + e.Message);
+              end;
+            end;
+          end;
+
+        finally
+          t_UniQuery.Free;
+        end;
+
+      finally
+        Contexto.Free;
+      end;
+    finally
+      vModel.Free;
+    end;
+  finally
+    FreeAndNil(vAssemblerObject);
+  end;
+end;
+
+procedure TORMDAOBase.DoInsert(aDTO: TORMDTOBase);
+var
+  NomeTab: String;
+  CamposPK, CamposCRUD: TArrayString;
+  Sep: String;
+  Campo: String;
+
+  Contexto: TRttiContext;
+  TipoRTTI: TRttiType;
+  PropRTTI: TRttiProperty;
+  t_UniQuery: TUniQuery;
+
+  vModel, vModel2: TORMModelBase;
+  vDTO: TORMDTOBase;
+  vAssemblerObject : TORMAssemblerBase;
+
+begin
+
+  vAssemblerObject := ORM.assemblerBase.TORMAssemblerBase.GetAssembler(aDTO.AssemblerClass);
+  try
+    vModel := vAssemblerObject.DTOToModel(aDTO);
+    try
+
+      NomeTab := vModel.GetTableName();
+      CamposCRUD := vModel.GetFieldsCRUD;
+      CamposPK := vModel.GetPrimaryKeys;
+
+      Contexto := TRttiContext.Create;
+      try
+        TipoRTTI := Contexto.GetType(vModel.ClassType);
+
+        t_UniQuery := TUniQuery.Create(nil);
+        try
+          with t_UniQuery do
+          begin
+            Connection := ORM.Connection.GetInstance().DataBase;
+            Close;
+            SQL.Clear;
+            SQL.Add('insert into ' + NomeTab);
+            SQL.Add(' ( ');
+
+            { Add colunas para Insert }
+            Sep := '';
+            for Campo in CamposCRUD do
+            begin
+              SQL.Add(Sep + Campo);
+              Sep := ', ';
+            end;
+            SQL.Add(' ) ');
+            SQL.Add(' values ( ');
+
+            Sep := '';
+            for Campo in CamposCRUD do
+            begin
+              SQL.Add(Sep + ':' + Campo);
+
+              Sep := ', ';
+              { Setando parâmetros }
+              for PropRTTI in TipoRTTI.GetProperties do
+              begin
+                if CompareText(PropRTTI.Name, Campo) = 0 then
+                begin
+                  PrepareParametersByModel(t_UniQuery, PropRTTI, Campo, vModel);
+                end;
+              end;
+            end;
+            SQL.Add(' ) ');
+
+            if (Length(CamposPK) > 0) then
+            begin
+
+              SQL.Add(' returning ');
+
+              Sep := '';
+              for Campo in CamposPK do
+              begin
+                SQL.Add(Sep + Campo);
+                Sep := ', ';
+              end;
+
+            end;
+
+            { Execute }
+            try
+              Prepare();
+
+              {Se tiver returning Open, senão Exec}
+              if (Length(CamposPK) > 0)
+                then Open
+                else ExecSQL;
+
+              { Mandraque para copiar o ID do registro }
+              vModel2 := vAssemblerObject.QueryToModel(t_UniQuery);
+              vDTO := vAssemblerObject.ModelToDTO(vModel2);
+              aDTO.ID := vDTO.ID;
+              vDTO.Free;
+              vModel2.Free;
+
+            except
+              on e: Exception do
+              begin
+                raise Exception.Create('Ocorreu um erro no método TORMDAOBase.DoInsert: ' + e.Message);
+              end;
+            end;
+          end;
+
+        finally
+          t_UniQuery.Free;
+        end;
+
+      finally
+        Contexto.Free;
+      end;
+    finally
+      vModel.Free;
+    end;
+  finally
+    FreeAndNil(vAssemblerObject);
+  end;
+end;
+
+procedure TORMDAOBase.DoSelect(aDTO: TORMDTOBase);
+var
+  NomeTab: String;
+  CamposPK, CamposCRUD: TArrayString;
+  Sep: String;
+  Campo: String;
+
+  Contexto: TRttiContext;
+  TipoRTTI: TRttiType;
+  PropRTTI: TRttiProperty;
+  t_UniQuery: TUniQuery;
+
+  vModel: TORMModelBase;
+  vAssemblerObject : TORMAssemblerBase;
+
+begin
+
+  vAssemblerObject := ORM.assemblerBase.TORMAssemblerBase.GetAssembler(aDTO.AssemblerClass);
+  try
+    vModel := vAssemblerObject.DTOToModel(aDTO);
+    try
+
+      NomeTab := vModel.GetTableName();
+      CamposPK := vModel.GetPrimaryKeys;
+      CamposCRUD := vModel.GetFieldsCRUD;
+
+      Contexto := TRttiContext.Create;
+      try
+        TipoRTTI := Contexto.GetType(vModel.ClassType);
+
+        t_UniQuery := TUniQuery.Create(nil);
+        try
+          with t_UniQuery do
+          begin
+            Connection := ORM.Connection.GetInstance().DataBase;
+            Close;
+            SQL.Clear;
+            SQL.Add('select ');
+
+
+            Sep := '';
+            for Campo in CamposPK do
+            begin
+              SQL.Add(Sep + Campo);
+              Sep := ' , ';
+            end;
+
+            { Add colunas para Select }
+            for Campo in CamposCRUD do
+            begin
+              SQL.Add(Sep + Campo);
+              Sep := ' , ';
+            end;
+
+            { Percorre todos os IDs }
+            SQL.Add(' from '+ NomeTab);
+            SQL.Add(' where ');
+            Sep := '';
+            for Campo in CamposPK do
+            begin
+              SQL.Add(Sep + Campo + '= :' + Campo);
+              Sep := ' and ';
+
+              { Setando parâmetros }
+              for PropRTTI in TipoRTTI.GetProperties do
+              begin
+                if CompareText(PropRTTI.Name, Campo) = 0 then
+                begin
+                  PrepareParametersByModel(t_UniQuery, PropRTTI, Campo, vModel);
+                end;
+              end;
+            end;
+
+            { Execute }
+            try
+              Prepare();
+              Open;
+            except
+              on e: Exception do
+              begin
+                raise Exception.Create('Ocorreu um erro no método TORMDAOBase.DoSelect: ' + e.Message);
+              end;
+            end;
+
+            First;
+            while not eof do
+            begin
+              vModel := vAssemblerObject.QueryToModel(t_UniQuery);
+              Next;
+            end;
+
+          end;
+        finally
+          t_UniQuery.Free;
+        end;
+
+      finally
+        Contexto.Free;
+      end;
+    finally
+      aDTO.Free;
+      aDTO := vAssemblerObject.ModelToDTO(vModel);
+      vModel.Free;
+    end;
+  finally
+    FreeAndNil(vAssemblerObject);
+  end;
+end;
+
+procedure TORMDAOBase.DoUpdate(aDTO: TORMDTOBase);
+var
+  NomeTab: String;
+  CamposPK, CamposCRUD: TArrayString;
+  Sep: String;
+  Campo: String;
+
+  Contexto: TRttiContext;
+  TipoRTTI: TRttiType;
+  PropRTTI: TRttiProperty;
+  t_UniQuery: TUniQuery;
+
+  vModel: TORMModelBase;
+  vAssemblerObject : TORMAssemblerBase;
+
+begin
+
+  vAssemblerObject := ORM.assemblerBase.TORMAssemblerBase.GetAssembler(aDTO.AssemblerClass);
+  try
+    vModel := vAssemblerObject.DTOToModel(aDTO);
+    try
+
+      NomeTab := vModel.GetTableName();
+      CamposPK := vModel.GetPrimaryKeys;
+      CamposCRUD := vModel.GetFieldsCRUD;
+
+      Contexto := TRttiContext.Create;
+      try
+        TipoRTTI := Contexto.GetType(vModel.ClassType);
+
+        t_UniQuery := TUniQuery.Create(nil);
+        try
+          with t_UniQuery do
+          begin
+            Connection := ORM.Connection.GetInstance().DataBase;
+            Close;
+            SQL.Clear;
+            SQL.Add('update ' + NomeTab);
+            SQL.Add('   set ');
+
+            { Add colunas para Update }
+            Sep := '';
+            for Campo in CamposCRUD do
+            begin
+              SQL.Add(Sep + Campo + '= :' + Campo);
+              Sep := ' , ';
+
+              { Setando parâmetros }
+              for PropRTTI in TipoRTTI.GetProperties do
+              begin
+                if CompareText(PropRTTI.Name, Campo) = 0 then
+                begin
+                  PrepareParametersByModel(t_UniQuery, PropRTTI, Campo, vModel);
+                end;
+              end;
+            end;
+
+            { Percorre todos os IDs }
+            SQL.Add(' where ');
+            Sep := '';
+            for Campo in CamposPK do
+            begin
+              SQL.Add(Sep + Campo + '= :' + Campo);
+              Sep := ' and ';
+
+              { Setando parâmetros }
+              for PropRTTI in TipoRTTI.GetProperties do
+              begin
+                if CompareText(PropRTTI.Name, Campo) = 0 then
+                begin
+                  PrepareParametersByModel(t_UniQuery, PropRTTI, Campo, vModel);
+                end;
+              end;
+            end;
+
+            { Execute }
+            try
+              Prepare();
+              ExecSQL;
+            except
+              on e: Exception do
+              begin
+                raise Exception.Create('Ocorreu um erro no método TORMDAOBase.DoUpdate: ' + e.Message);
+              end;
+            end;
+          end;
+
+        finally
+          t_UniQuery.Free;
+        end;
+
+      finally
+        Contexto.Free;
+      end;
+    finally
+      vModel.Free;
+    end;
+  finally
+    FreeAndNil(vAssemblerObject);
+  end;
+
+end;
+
+end.

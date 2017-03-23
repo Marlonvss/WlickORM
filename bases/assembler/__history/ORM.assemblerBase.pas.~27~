@@ -1,0 +1,45 @@
+unit ORM.assemblerBase;
+
+interface
+
+uses SysUtils, ORM.dtoBase, ORM.modelBase, Uni, generics.Collections, System.Classes;
+
+type
+  TORMAssemblerBaseClass = class of TORMAssemblerBase;
+  TORMAssemblerBase = class(TPersistent)
+  public
+    class function GetAssembler(const aClass: String): TORMAssemblerBase;
+
+	  class function GetClone(const aModel: TORMModelBase): TORMModelBase; overload; virtual; abstract;
+    class function GetClone(const aDTO: TORMDTOBase): TORMDTOBase; overload; virtual; abstract;
+    class function ModelToDTO(const aModel: TORMModelBase): TORMDTOBase; virtual; abstract;
+    class function DTOToModel(const aDTO: TORMDTOBase): TORMModelBase; virtual; abstract;
+    class function QueryToModel(const aQuery: TUniQuery): TORMModelBase; virtual; abstract;
+  end;
+
+implementation
+
+{ TORMAssemblerBase }
+
+{ TORMAssemblerBase }
+
+class function TORMAssemblerBase.GetAssembler(
+  const aClass: String): TORMAssemblerBase;
+var
+  AssemblerClass: TORMAssemblerBaseClass;
+begin
+  try
+    AssemblerClass := TORMAssemblerBaseClass(FindClass(aClass));
+    if Assigned(AssemblerClass) then
+    begin
+      Result := AssemblerClass.Create;
+    end;
+  except
+    on e: exception do
+    begin
+      raise Exception.Create('Método AssemblerClass não retornou um classe de Assembler existente!'+ E.Message);
+    end;
+  end;
+end;
+
+end.

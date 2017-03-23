@@ -1,0 +1,24 @@
+unit ORM.assemblerBase;
+
+interface
+
+uses SysUtils, ORM.dtoBase, ORM.modelBase, Uni, generics.Collections, System.Classes;
+
+type
+  TORMAssemblerBaseClass = class of TORMAssemblerBase;
+  TORMAssemblerBase = class(TPersistent)
+  public
+    class function GetAssembler(const aClass: String): TORMAssemblerBase;
+
+	  class function GetClone(const aModel: TORMModelBase): TORMModelBase; overload; virtual; abstract;
+    class function GetClone(const aDTO: TORMDTOBase): TORMDTOBase; overload; virtual; abstract;
+    class function ModelToDTO(const aModel: TORMModelBase): TORMDTOBase; virtual; abstract;
+    class function DTOToModel(const aDTO: TORMDTOBase): TORMModelBase; virtual; abstract;
+    class function QueryToModel(const aQuery: TUniQuery): TORMModelBase; virtual; abstract;
+  end;
+
+implementation
+
+{ TORMAssemblerBase }
+
+end.

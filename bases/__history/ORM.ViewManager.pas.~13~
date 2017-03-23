@@ -1,0 +1,96 @@
+﻿unit ORM.ViewManager;
+
+interface
+
+uses Rtti, ORM.attributes, system.SysUtils, Uni,
+  WLick.Constantes, TypInfo, WLick.ClassHelper, Generics.Collections, ORM.daoBase,
+  cxGridDBTableView, DB, WLick.ConstrutorSQL, ORM.BrowserBase,
+  ORM.FichaBase, Forms;
+
+type
+  TORMViewManager = class
+  private
+    function BrowserJaAberto(const aClass: TORMBrowserBaseClass): boolean;
+    function GetBrowserJaAtivo(const aClass: TORMBrowserBaseClass): TORMBrowserBase;
+    procedure MostraBrowserAberto(const aClass: TORMBrowserBaseClass);
+  public
+    class procedure AbreBrowser(aClass: TORMBrowserBaseClass);
+    class procedure AbreFicha(aClass: TORMFichaBaseClass);
+  end;
+
+implementation
+
+{ TControllerBase }
+
+class procedure TORMViewManager.AbreBrowser(aClass: TORMBrowserBaseClass);
+var
+  vBrowser: TORMBrowserBase;
+begin
+  with TORMViewManager.Create do
+  try
+    try
+      if BrowserJaAberto(aClass) then
+      begin
+        MostraBrowserAberto(aClass);
+      end
+      else
+      begin
+        vBrowser := aClass.Create(nil);
+        vBrowser.Init();
+        vBrowser.KeyPreview := True;
+        vBrowser.BorderStyle := bsSingle;
+        vBrowser.FormStyle := fsMDIChild;
+        vBrowser.Show;
+      end;
+    except
+      on E: exception do
+        raise exception.Create('Erro durante a criação do browser: ' + E.Message);
+    end;
+  finally
+    Free;
+  end;
+end;
+
+class procedure TORMViewManager.AbreFicha(aClass: TORMFichaBaseClass): Boolean;
+begin
+  with aClass.Create(nil) do
+  try
+    Init(TGUID.Empty,True);
+  finally
+    free;
+  end;
+end;
+
+function TORMViewManager.BrowserJaAberto(const aClass: TORMBrowserBaseClass): boolean;
+begin
+  Result := Assigned(GetBrowserJaAtivo(aClass));
+end;
+
+procedure TORMViewManager.MostraBrowserAberto(const aClass: TORMBrowserBaseClass);
+var
+  vBrowser: TORMBrowserBase;
+begin
+  vBrowser := GetBrowserJaAtivo(aClass);
+  if Assigned(vBrowser) then
+  begin
+    vBrowser.WindowState := wsNormal;
+    vBrowser.BringToFront;
+    vBrowser.Show;
+  end;
+end;
+
+function TORMViewManager.GetBrowserJaAtivo(const aClass: TORMBrowserBaseClass): TORMBrowserBase;
+var
+  i: Integer;
+begin
+  Result := nil;
+  for i := 0 to Application.MainForm.MDIChildCount - 1 do
+    if SameText(Application.MainForm.MDIChildren[i].ClassName, aClass.ClassName) then
+    begin
+      Result := TORMBrowserBase(Application.MainForm.MDIChildren[i]);
+      Break;
+    end;
+end;
+
+end.
+

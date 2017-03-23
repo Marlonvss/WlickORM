@@ -1,0 +1,30 @@
+object DModule: TDModule
+  OldCreateOrder = False
+  Height = 279
+  Width = 342
+  object Transacao: TUniTransaction
+    DefaultConnection = Conexao
+    Left = 23
+    Top = 72
+  end
+  object Conexao: TUniConnection
+    ProviderName = 'PostgreSQL'
+    Port = 5432
+    Database = 'brinquedao'
+    DefaultTransaction = Transacao
+    Username = 'postgres'
+    Server = '127.0.0.1'
+    Connected = True
+    Left = 23
+    Top = 22
+    EncryptedPassword = '8FFF90FF8CFF8BFF98FF8DFF9AFF8CFF'
+  end
+  object SQLServerUniProvider: TSQLServerUniProvider
+    Left = 120
+    Top = 20
+  end
+  object PostgreSQLUniProvider: TPostgreSQLUniProvider
+    Left = 120
+    Top = 76
+  end
+end

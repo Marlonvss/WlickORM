@@ -1,0 +1,26 @@
+object DModule: TDModule
+  OldCreateOrder = False
+  Height = 157
+  Width = 205
+  object Transacao: TUniTransaction
+    DefaultConnection = Conexao
+    Left = 23
+    Top = 72
+  end
+  object Conexao: TUniConnection
+    ProviderName = 'SQL Server'
+    Database = 'projeto'
+    DefaultTransaction = Transacao
+    Username = 'sa'
+    Server = 'MARLONVITOR\SQLEXPRESS'
+    Connected = True
+    LoginPrompt = False
+    Left = 23
+    Top = 22
+    EncryptedPassword = '8CFF9EFF'
+  end
+  object SQLServerUniProvider: TSQLServerUniProvider
+    Left = 120
+    Top = 20
+  end
+end

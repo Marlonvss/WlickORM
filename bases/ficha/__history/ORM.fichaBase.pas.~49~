@@ -1,0 +1,324 @@
+unit ORM.fichaBase;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, cxCheckBox, Vcl.ExtCtrls,
+  System.Actions, Vcl.ActnList, Vcl.PlatformDefaultStyleActnCtrls, Vcl.ActnMan,
+  dxBar, cxBarEditItem, cxClasses, ORM.DTOBase, ORM.ControllerBase,
+  WLick.Miscelania;
+
+type
+
+  TStatusFicha = (sfView, sfEdit, sfInsert);
+
+  TORMFichaBaseClass = class of TORMFichaBase;
+
+  TORMFichaBase = class(TForm)
+    menuFicha: TdxBarManager;
+    menuBrowserBar1: TdxBar;
+    btnGravar: TdxBarButton;
+    btnCancelar: TdxBarButton;
+    actFicha: TActionManager;
+    actGravar: TAction;
+    actCancelar: TAction;
+    pnlPrincipal: TPanel;
+    dxBarButton1: TdxBarButton;
+    menuBrowserBar2: TdxBar;
+    actSair: TAction;
+    procedure actGravarExecute(Sender: TObject);
+    procedure actCancelarExecute(Sender: TObject);
+    procedure actSairExecute(Sender: TObject);
+  private
+    procedure DrawFicha();
+
+    procedure InitFrame();
+    procedure AtualizaBotoes();
+
+  protected
+    FLoadingFicha: Boolean;
+    FStatusFicha: TStatusFicha;
+
+    FDTO: TORMDTOBase;
+    FController: TORMControllerBase;
+    FFrame: TFrame;
+    FAbort: Boolean;
+
+    function GetCaption: String; virtual; abstract;
+    function GetFrame: TFrame; virtual; abstract;
+    procedure LoadComplementos; virtual;
+
+    function ClassController: TORMControllerBaseClass; virtual; abstract;
+    function ClassDTO: TORMDTOBaseClass; virtual; abstract;
+
+    procedure OnChangeMethod(Sender: TObject);
+    procedure SetOnChange(); virtual;
+    procedure SetEvents(); virtual;
+
+    procedure ViewToDTO(); virtual; abstract;
+    procedure DTOToView(); virtual; abstract;
+
+    { Methods Close }
+    procedure BeforeClose(); virtual;
+    procedure OnClose(); virtual;
+    procedure AfterClose(); virtual;
+
+    { Methods Save }
+    procedure BeforeSave(); virtual;
+    procedure OnSave(); virtual;
+    procedure AfterSave(); virtual;
+
+    { Methods Cancel }
+    procedure BeforeCancel(); virtual;
+    procedure OnCancel(); virtual;
+    procedure AfterCancel(); virtual;
+
+    procedure CreateAllObjects(); virtual;
+    procedure DestroyAllObjects(); virtual;
+
+  public
+    procedure Init(aID: TGuid; const aInserindo: Boolean = False); virtual;
+  end;
+
+implementation
+
+{$R *.dfm}
+{ TORMFichaBase }
+
+procedure TORMFichaBase.actCancelarExecute(Sender: TObject);
+begin
+  try
+    Self.BeforeCancel();
+    Self.OnCancel();
+  finally
+    Self.AfterCancel();
+  end;
+end;
+
+procedure TORMFichaBase.actGravarExecute(Sender: TObject);
+begin
+  try
+    Self.BeforeSave();
+    Self.OnSave();
+  finally
+    Self.AfterSave();
+  end;
+end;
+
+procedure TORMFichaBase.actSairExecute(Sender: TObject);
+begin
+  try
+    Self.BeforeClose();
+    Self.OnClose();
+  finally
+    Self.AfterClose();
+  end;
+end;
+
+procedure TORMFichaBase.AfterCancel;
+begin
+  if FAbort
+    then Exit;
+  AtualizaBotoes();
+end;
+
+procedure TORMFichaBase.AfterClose;
+begin
+  if FAbort
+    then Exit;
+end;
+
+procedure TORMFichaBase.AfterSave;
+begin
+  if FAbort
+    then Exit;
+  ShowMessage('Registro gravado com sucesso.');
+  actCancelar.Execute;
+end;
+
+procedure TORMFichaBase.AtualizaBotoes;
+var
+  vEditando: Boolean;
+begin
+  vEditando := (FStatusFicha in [sfEdit, sfInsert]);
+
+  actGravar.Enabled := vEditando;
+  actCancelar.Enabled := vEditando;
+
+  actSair.Enabled := not vEditando;
+end;
+
+procedure TORMFichaBase.BeforeCancel;
+begin
+  FAbort := False;
+end;
+
+procedure TORMFichaBase.BeforeClose;
+begin
+  FAbort := False;
+end;
+
+procedure TORMFichaBase.BeforeSave;
+begin
+  FAbort := False;
+
+  //WLick.Miscelania.TMisc.PostAllEditValues(FFrame);
+  Self.ViewToDTO;
+end;
+
+procedure TORMFichaBase.CreateAllObjects;
+begin
+  Self.FController := ClassController.Create;
+  Self.FDTO := ClassDTO.Create;
+end;
+
+procedure TORMFichaBase.DestroyAllObjects;
+begin
+  Self.FController.Free;
+  Self.FDTO.Free;
+end;
+
+procedure TORMFichaBase.DrawFicha;
+begin
+  FLoadingFicha := True;
+  try
+    Caption := GetCaption();
+    LoadComplementos;
+    InitFrame();
+    DTOToView;
+    AtualizaBotoes();
+  finally
+    FLoadingFicha := False;
+  end;
+end;
+
+procedure TORMFichaBase.Init(aID: TGuid; const aInserindo: Boolean);
+begin
+  CreateAllObjects();
+  try
+    Self.FDTO.ID := aID;
+
+    if aInserindo
+      then Self.FStatusFicha := sfInsert
+      else Self.FController.Select(Self.FDTO);
+
+    Self.DrawFicha();
+    Self.ShowModal;
+
+  finally
+    Self.AtualizaBotoes();
+    DestroyAllObjects();
+  end;
+end;
+
+procedure TORMFichaBase.InitFrame;
+const
+  cHeightMenu = 24;
+  cMsgNenhumFrame = 'Nenhum frame foi encontrado!';
+begin
+  FFrame := GetFrame();
+  if Assigned(FFrame) then
+  begin
+    // Dimenciona a ficha de acordo com o tamanho do frame...
+    Self.ClientWidth := FFrame.Width + pnlPrincipal.Margins.Left + pnlPrincipal.Margins.Right;
+    Self.ClientHeight := FFrame.Height + cHeightMenu + pnlPrincipal.Margins.Top + pnlPrincipal.Margins.Bottom;
+
+    FFrame.Parent := Self.pnlPrincipal;
+    FFrame.Align := alClient;
+    FFrame.Show;
+    SetOnChange();
+    SetEvents();
+  end
+  else
+  begin
+    Self.pnlPrincipal.Caption := cMsgNenhumFrame;
+  end;
+end;
+
+procedure TORMFichaBase.LoadComplementos;
+begin
+// Usado para carregar complementos do DTO antes de carregar a ficha...
+end;
+
+procedure TORMFichaBase.OnCancel;
+begin
+  if FAbort
+    then Exit;
+  if (not Self.FLoadingFicha) then
+  begin
+    case FStatusFicha of
+      sfView:
+        OnClose();
+      sfEdit:
+        FStatusFicha := sfView;
+      sfInsert:
+        begin
+          FStatusFicha := sfView;
+          OnClose();
+        end;
+    end;
+  end;
+end;
+
+procedure TORMFichaBase.OnChangeMethod(Sender: TObject);
+begin
+  if not FLoadingFicha then
+  begin
+    if Self.FStatusFicha in [sfView] then
+      Self.FStatusFicha := sfEdit;
+
+    Self.AtualizaBotoes;
+  end;
+end;
+
+procedure TORMFichaBase.OnClose;
+var
+  vResp: Boolean;
+begin
+  if FAbort
+    then Exit;
+
+  if (not Self.FLoadingFicha) then
+  begin
+    case FStatusFicha of
+      sfView:
+        vResp := True;
+      sfEdit, sfInsert:
+        begin
+          ShowMessage('Modo de edição.. favor, cancele ou grave antes de sair!');
+          vResp := False;
+        end;
+    end;
+
+    if vResp then
+      Self.Close;
+
+  end;
+end;
+
+procedure TORMFichaBase.OnSave;
+begin
+  if FAbort
+    then Exit;
+
+  case FStatusFicha of
+    sfEdit:
+      FController.Update(FDTO);
+    sfInsert:
+      FController.Insert(FDTO);
+  end;
+
+end;
+
+procedure TORMFichaBase.SetEvents;
+begin
+
+end;
+
+procedure TORMFichaBase.SetOnChange;
+begin
+
+end;
+
+end.
