@@ -81,6 +81,7 @@ type
     uniBrowser: TUniQuery;
     cxBarEditItem1: TcxBarEditItem;
     cxBarEditItem2: TcxBarEditItem;
+    actRefresh: TAction;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -92,6 +93,7 @@ type
       ACellViewInfo: TcxGridTableDataCellViewInfo; AButton: TMouseButton;
       AShift: TShiftState; var AHandled: Boolean);
     procedure NenhumEvento(a_Sender: TObject);
+    procedure actRefreshExecute(Sender: TObject);
 
   private
     FColumns: TStringList;
@@ -191,6 +193,11 @@ begin
     Self.LoadBrowser();
     Free;
   end;
+end;
+
+procedure TORMBrowserBase.actRefreshExecute(Sender: TObject);
+begin
+  LoadBrowser;
 end;
 
 function TORMBrowserBase.AddButton(const aName, aCaption: String;

@@ -29,8 +29,6 @@ object ORMfichaBase: TORMfichaBase
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 4
-    ExplicitLeft = 13
-    ExplicitTop = 27
   end
   object menuFicha: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
@@ -153,11 +151,13 @@ object ORMfichaBase: TORMfichaBase
     object actGravar: TAction
       Caption = 'Gravar'
       ImageIndex = 0
+      ShortCut = 16397
       OnExecute = actGravarExecute
     end
     object actCancelar: TAction
       Caption = 'Cancelar'
       ImageIndex = 1
+      ShortCut = 27
       OnExecute = actCancelarExecute
     end
     object actSair: TAction

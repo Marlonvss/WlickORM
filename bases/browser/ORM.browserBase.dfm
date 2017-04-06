@@ -211,6 +211,11 @@ object ORMBrowserBase: TORMBrowserBase
       ShortCut = 16430
       OnExecute = actExcluirExecute
     end
+    object actRefresh: TAction
+      Caption = 'actRefresh'
+      ShortCut = 116
+      OnExecute = actRefreshExecute
+    end
   end
   object editRepository: TcxEditRepository
     Left = 36

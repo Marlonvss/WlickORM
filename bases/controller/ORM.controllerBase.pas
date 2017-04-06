@@ -4,14 +4,13 @@ interface
 
 uses Rtti, ORM.attributes, system.SysUtils, Uni,
   WLick.Constantes, TypInfo, WLick.ClassHelper, Generics.Collections,
-  ORM.daoBase, ORM.dtoBase, ORM.assemblerBase, dao.Atividades;
+  ORM.daoBase, ORM.dtoBase, ORM.assemblerBase;
 
 type
   TORMControllerBaseClass = class of TORMControllerBase;
   TORMControllerBase = class
     protected
       FDAO: TORMDAOBase;
-      function MyDAO(): TDAOAtividades;
       function ClassDAO(): TORMDAOBaseClass; virtual; abstract;
 
       procedure CreateAllObjects(); virtual;
@@ -68,11 +67,6 @@ begin
     raise Exception.Create('Classe DAO não foi instanciado!');
 
   Self.FDAO.DoInsert(aDTO);
-end;
-
-function TORMControllerBase.MyDAO: TDAOAtividades;
-begin
-  Result := (FDAO as TDAOAtividades);
 end;
 
 procedure TORMControllerBase.Select(aDTO: TORMDTOBase);
